@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Provincia Misteriosa 🇮🇹</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="game-header">
+    <div class="header-left">
+      <div class="logo-container" title="La Provincia Misteriosa">
+        <svg class="italy-logo" viewBox="0 0 100 100" width="40" height="40">
+          <circle cx="50" cy="50" r="46" fill="#e65100" />
+          <path d="M 33 25 L 44 25 L 44 75 L 33 75 Z" fill="#009246"/>
+          <path d="M 44 25 L 56 25 L 56 75 L 44 75 Z" fill="#ffffff"/>
+          <path d="M 56 25 L 67 25 L 67 75 L 56 75 Z" fill="#ce2b37"/>
+          <path d="M 42 28 C 46 28 50 32 48 36 C 47 40 52 44 55 46 C 58 48 62 52 58 56 C 55 58 52 56 50 60 C 48 63 42 68 38 65 C 36 63 42 58 43 54 C 44 50 40 44 42 36 Z" fill="#ffffff" opacity="0.9" stroke="#333" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h1 class="game-title">La Provincia Misteriosa</h1>
+    </div>
+
+    <div class="header-right">
+      <div class="mode-switch">
+        <button id="btn-daily" class="mode-btn active">Giornaliera</button>
+        <button id="btn-infinite" class="mode-btn">Infinita</button>
+      </div>
+      <button id="btn-stats" class="icon-btn" title="Statistiche">📊</button>
+      <button id="btn-help" class="icon-btn" title="Regole del gioco">❓</button>
+      <button id="btn-surrender" class="action-btn surrender-btn" title="Mi arrendo">🏳️ Arrenditi</button>
+    </div>
+  </header>
+
+  <!-- Main Game Container -->
+  <main class="game-container">
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Griglia Tentativi (Dinamica) -->
+    <div class="board-wrapper">
+      <div id="game-board" class="game-board"></div>
+    </div>
+
+    <!-- Tastiera virtuale -->
+    <div class="keyboard-container" id="keyboard"></div>
+
+    <!-- Pulsante Donazione PayPal -->
+    <div class="paypal-section">
+      <p class="paypal-text">
+        Il gioco è 100% gratuito e senza pubblicità. Se ti va di sostenere il progetto e offrire un caffè allo sviluppatore, puoi fare una donazione libera! ❤️
+      </p>
+      <a href="https://www.paypal.com/paypalme/AlessioBaldacci" target="_blank" rel="noopener noreferrer" class="paypal-btn">
+        ☕ Offri un caffè su PayPal
+      </a>
+    </div>
+  </main>
+
+  <!-- Modal Regole (Si apre ad ogni avvio) -->
+  <div id="modal-rules" class="modal open">
+    <div class="modal-content">
+      <button class="modal-close" id="close-rules">&times;</button>
+      <h2>Come Giocare 🇮🇹</h2>
+      <p>Indovina la <strong>Provincia Italiana</strong> in 6 tentativi!</p>
+      <ul class="rules-list">
+        <li>Ogni tentativo deve essere una provincia italiana valida.</li>
+        <li>Gli accenti e gli apostrofi vengono rimossi (es. <em>Forlì-Cesena</em> &rarr; <code>FORLI-CESENA</code>, <em>L'Aquila</em> &rarr; <code>LAQUILA</code>).</li>
+        <li><strong>Il trattino (-) è considerato una lettera a tutti gli effetti</strong> ed è presente sulla tastiera.</li>
+        <li>La griglia si adatta in lunghezza alla provincia che digiti!</li>
+      </ul>
+
+      <h3>Legenda Colori:</h3>
+      <div class="example-grid">
+        <div class="example-tile correct">R</div>
+        <p><strong>Verde:</strong> La lettera è corretta e nella posizione giusta.</p>
+        <div class="example-tile present">M</div>
+        <p><strong>Giallo:</strong> La lettera è presente nella provincia, ma nella posizione sbagliata.</p>
+        <div class="example-tile absent">A</div>
+        <p><strong>Rosso:</strong> La lettera non appartiene alla provincia da indovinare.</p>
+      </div>
+
+      <button id="btn-start" class="primary-btn">Inizia a Giocare 🚀</button>
+    </div>
+  </div>
+
+  <!-- Modal Statistiche -->
+  <div id="modal-stats" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-stats">&times;</button>
+      <h2>Statistiche Giocatore 📊</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-played">0</span>
+          <span class="stat-label">Giocate</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-winrate">0%</span>
+          <span class="stat-label">Vittorie</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-streak">0</span>
+          <span class="stat-label">Striscia Attuale</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-max-streak">0</span>
+          <span class="stat-label">Striscia Max</span>
+        </div>
+      </div>
+
+      <div id="game-over-box" class="game-over-box hidden">
+        <p id="game-over-msg"></p>
+        <button id="btn-new-game" class="primary-btn">Nuova Partita 🔄</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Caricamento script -->
+  <script src="province.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
