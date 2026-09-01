@@ -1,4 +1,3 @@
-// Recupero elenco province da window
 const provinceList = window.provinceList || [];
 
 const MAX_ATTEMPTS = 6;
@@ -7,16 +6,14 @@ const DEFAULT_GRID_COLUMNS = 6;
 const KEYBOARD_ROWS = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', '-'],
-  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACKSPACE']
+  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ' ', 'BACKSPACE']
 ];
 
-// Normalizzazione: rimuove accenti, apostrofi e spazi. Mantiene il trattino (-)
 function normalizeName(str) {
   return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/['’]/g, "")
-    .replace(/\s+/g, "")
     .toUpperCase();
 }
 
@@ -29,17 +26,15 @@ provinceList.forEach(item => {
   normalizedToOriginalMap.set(norm, item);
 });
 
-// Stato del gioco
 let mode = 'daily';
 let targetProvinceNorm = '';
 let targetProvinceOriginal = '';
 let currentAttempt = 0;
 let currentGuess = '';
-let submittedGuesses = []; // Memorizza i tentativi inviati con i loro esiti
+let submittedGuesses = [];
 let isGameOver = false;
 let keyStates = {};
 
-// Elementi DOM
 const boardEl = document.getElementById('game-board');
 const keyboardEl = document.getElementById('keyboard');
 const modalRules = document.getElementById('modal-rules');
@@ -50,8 +45,9 @@ const btnInfinite = document.getElementById('btn-infinite');
 const gameOverBox = document.getElementById('game-over-box');
 const gameOverMsg = document.getElementById('game-over-msg');
 const btnNewGame = document.getElementById('btn-new-game');
+const inGameActionBox = document.getElementById('in-game-action-box');
+const btnQuickNewGame = document.getElementById('btn-quick-new-game');
 
-// --- STATISTICHE LOCALSTORAGE ---
 function getStats() {
   const defaultStats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0 };
   const saved = localStorage.getItem('provincia_misteriosa_stats');
@@ -83,7 +79,28 @@ function updateStatsUI() {
   document.getElementById('stat-max-streak').textContent = stats.maxStreak;
 }
 
-// --- SELEZIONE PROVINCIA ---
+function getDailyKey() {
+  const today = new Date();
+  return `provincia_daily_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+}
+
+function saveDailyState() {
+  if (mode !== 'daily') return;
+  const state = {
+    isGameOver,
+    submittedGuesses,
+    currentAttempt,
+    targetProvinceNorm,
+    keyStates
+  };
+  localStorage.setItem(getDailyKey(), JSON.stringify(state));
+}
+
+function loadDailyState() {
+  const saved = localStorage.getItem(getDailyKey());
+  return saved ? JSON.parse(saved) : null;
+}
+
 function getDailyProvince() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
@@ -100,15 +117,7 @@ function getRandomProvince() {
   return normalizedList[index];
 }
 
-// --- INIZIALIZZAZIONE PARTITA ---
 function initGame() {
-  if (mode === 'daily') {
-    targetProvinceNorm = getDailyProvince();
-  } else {
-    targetProvinceNorm = getRandomProvince();
-  }
-
-  targetProvinceOriginal = normalizedToOriginalMap.get(targetProvinceNorm);
   currentAttempt = 0;
   currentGuess = '';
   submittedGuesses = [];
@@ -116,12 +125,52 @@ function initGame() {
   keyStates = {};
 
   gameOverBox.classList.add('hidden');
+  inGameActionBox.classList.add('hidden');
+
+  if (mode === 'daily') {
+    targetProvinceNorm = getDailyProvince();
+    targetProvinceOriginal = normalizedToOriginalMap.get(targetProvinceNorm);
+    
+    const savedDaily = loadDailyState();
+    if (savedDaily && savedDaily.targetProvinceNorm === targetProvinceNorm) {
+      isGameOver = savedDaily.isGameOver;
+      submittedGuesses = savedDaily.submittedGuesses || [];
+      currentAttempt = savedDaily.currentAttempt || 0;
+      keyStates = savedDaily.keyStates || {};
+
+      if (isGameOver) {
+        const won = submittedGuesses.length > 0 && submittedGuesses[submittedGuesses.length - 1].word === targetProvinceNorm;
+        gameOverMsg.textContent = won 
+          ? `Hai già completato la sfida di oggi! Provincia: ${targetProvinceOriginal} 🎉` 
+          : `Sfida di oggi completata! La provincia era: ${targetProvinceOriginal}`;
+        gameOverBox.classList.remove('hidden');
+        btnNewGame.classList.add('hidden');
+      }
+    }
+  } else {
+    let newTarget = getRandomProvince();
+    if (normalizedList.length > 1 && newTarget === targetProvinceNorm) {
+      newTarget = getRandomProvince();
+    }
+    targetProvinceNorm = newTarget;
+    targetProvinceOriginal = normalizedToOriginalMap.get(targetProvinceNorm);
+    btnNewGame.classList.remove('hidden');
+  }
 
   renderBoard();
   buildKeyboard();
+  reapplyKeyStates();
 }
 
-// --- RENDERING DELLA GRIGLIA (6x6 Default, Dinamica al tipo) ---
+function reapplyKeyStates() {
+  Object.keys(keyStates).forEach(key => {
+    const btn = keyboardEl.querySelector(`[data-key="${key}"]`);
+    if (btn) {
+      btn.className = `key-btn ${keyStates[key]} ${key === 'ENTER' || key === 'BACKSPACE' ? 'wide-key' : ''} ${key === ' ' ? 'space-key' : ''}`;
+    }
+  });
+}
+
 function renderBoard() {
   boardEl.innerHTML = '';
 
@@ -131,28 +180,28 @@ function renderBoard() {
     rowEl.id = `row-${r}`;
 
     if (r < currentAttempt) {
-      // Tentativi già inviati
       const guessData = submittedGuesses[r];
       guessData.word.split('').forEach((char, i) => {
         const tile = document.createElement('div');
         tile.className = `tile ${guessData.evaluation[i]}`;
-        tile.textContent = char;
+        tile.textContent = char === ' ' ? '␣' : char;
+        if (char === ' ') tile.classList.add('space-tile');
         rowEl.appendChild(tile);
       });
-    } else if (r === currentAttempt) {
-      // Riga corrente in corso di digitazione: mostra almeno 6 caselle o di più se necessario
+    } else if (r === currentAttempt && !isGameOver) {
       const tilesCount = Math.max(DEFAULT_GRID_COLUMNS, currentGuess.length);
       for (let c = 0; c < tilesCount; c++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
         if (c < currentGuess.length) {
-          tile.textContent = currentGuess[c];
+          const char = currentGuess[c];
+          tile.textContent = char === ' ' ? '␣' : char;
           tile.classList.add('filled');
+          if (char === ' ') tile.classList.add('space-tile');
         }
         rowEl.appendChild(tile);
       }
     } else {
-      // Righe future: default 6 caselle vuote
       for (let c = 0; c < DEFAULT_GRID_COLUMNS; c++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
@@ -164,7 +213,6 @@ function renderBoard() {
   }
 }
 
-// --- GENERAZIONE TASTIERA ---
 function buildKeyboard() {
   keyboardEl.innerHTML = '';
 
@@ -184,6 +232,9 @@ function buildKeyboard() {
       } else if (key === 'BACKSPACE') {
         btn.textContent = '⌫';
         btn.classList.add('wide-key');
+      } else if (key === ' ') {
+        btn.textContent = 'SPAZIO';
+        btn.classList.add('space-key');
       } else {
         btn.textContent = key;
       }
@@ -200,7 +251,6 @@ function buildKeyboard() {
   });
 }
 
-// --- GESTIONE INPUT ---
 function handleKeyPress(key) {
   if (isGameOver) return;
 
@@ -208,26 +258,29 @@ function handleKeyPress(key) {
     submitGuess();
   } else if (key === 'BACKSPACE') {
     removeLetter();
+  } else if (key === ' ' || key === 'SPACE') {
+    addLetter(' ');
   } else if (/^[A-Z\-]$/.test(key)) {
     addLetter(key);
   }
 }
 
-// Event Listener da tastiera fisica
 window.addEventListener('keydown', (e) => {
   if (isGameOver) return;
-  
-  // Evita intercettazione se l'utente è su un modale aperto
   if (modalRules.classList.contains('open') || modalStats.classList.contains('open')) return;
 
-  const key = e.key.toUpperCase();
-
-  if (key === 'ENTER') {
+  if (e.key === 'Enter') {
     handleKeyPress('ENTER');
-  } else if (key === 'BACKSPACE') {
+  } else if (e.key === 'Backspace') {
     handleKeyPress('BACKSPACE');
-  } else if (/^[A-Z\-]$/.test(key)) {
-    handleKeyPress(key);
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    handleKeyPress(' ');
+  } else {
+    const key = e.key.toUpperCase();
+    if (/^[A-Z\-]$/.test(key)) {
+      handleKeyPress(key);
+    }
   }
 });
 
@@ -235,7 +288,6 @@ function addLetter(letter) {
   currentGuess += letter;
   renderBoard();
   
-  // Effetto animazione pop sulla nuova lettera inserita
   const activeRow = document.getElementById(`row-${currentAttempt}`);
   if (activeRow) {
     const targetTile = activeRow.children[currentGuess.length - 1];
@@ -252,14 +304,12 @@ function removeLetter() {
   }
 }
 
-// --- VALIDAZIONE E VALUTAZIONE ---
 function submitGuess() {
   if (currentGuess.length === 0) {
     showToast('Inserisci prima una provincia!');
     return;
   }
 
-  // Verifica se la provincia esiste nel database
   if (!normalizedList.includes(currentGuess)) {
     showToast('Provincia non presente nella lista!');
     return;
@@ -273,13 +323,11 @@ function evaluateGuess(guess) {
   const guessArr = guess.split('');
   const evaluation = Array(guess.length).fill('absent');
 
-  // Mappa frequenze per gestione doppie
   const targetCounts = {};
   targetArr.forEach(char => {
     targetCounts[char] = (targetCounts[char] || 0) + 1;
   });
 
-  // Passaggio 1: Corrette (VERDE)
   guessArr.forEach((char, i) => {
     if (i < targetArr.length && char === targetArr[i]) {
       evaluation[i] = 'correct';
@@ -287,7 +335,6 @@ function evaluateGuess(guess) {
     }
   });
 
-  // Passaggio 2: Presenti ma errate (GIALLO)
   guessArr.forEach((char, i) => {
     if (evaluation[i] !== 'correct' && targetCounts[char] > 0) {
       evaluation[i] = 'present';
@@ -295,13 +342,11 @@ function evaluateGuess(guess) {
     }
   });
 
-  // Salvataggio del tentativo
   submittedGuesses.push({
     word: guess,
     evaluation: evaluation
   });
 
-  // Animazione riga
   const activeRow = document.getElementById(`row-${currentAttempt}`);
   if (activeRow) {
     const tiles = activeRow.children;
@@ -326,6 +371,7 @@ function evaluateGuess(guess) {
     } else {
       currentAttempt++;
       currentGuess = '';
+      if (mode === 'daily') saveDailyState();
       renderBoard();
     }
   }, guess.length * 150 + 200);
@@ -339,18 +385,26 @@ function updateKeyState(key, state) {
     keyStates[key] = state;
     const btn = keyboardEl.querySelector(`[data-key="${key}"]`);
     if (btn) {
-      btn.className = `key-btn ${state} ${key.length > 1 ? 'wide-key' : ''}`;
+      btn.className = `key-btn ${state} ${key === 'ENTER' || key === 'BACKSPACE' ? 'wide-key' : ''} ${key === ' ' ? 'space-key' : ''}`;
     }
   }
 }
 
-// --- FINE PARTITA ---
 function endGame(won, message) {
   isGameOver = true;
+  if (mode === 'daily') saveDailyState();
   saveStats(won);
 
   gameOverMsg.textContent = message;
   gameOverBox.classList.remove('hidden');
+
+  if (mode === 'infinite') {
+    btnNewGame.classList.remove('hidden');
+    inGameActionBox.classList.remove('hidden');
+  } else {
+    btnNewGame.classList.add('hidden');
+    inGameActionBox.classList.add('hidden');
+  }
 
   setTimeout(() => {
     modalStats.classList.add('open');
@@ -368,7 +422,6 @@ function showToast(msg) {
   }, 2000);
 }
 
-// --- EVENT LISTENERS E MODALI ---
 document.getElementById('btn-help').addEventListener('click', () => {
   modalRules.classList.add('open');
 });
@@ -390,7 +443,6 @@ document.getElementById('close-stats').addEventListener('click', () => {
   modalStats.classList.remove('open');
 });
 
-// Chiusura modali cliccando sullo sfondo
 [modalRules, modalStats].forEach(modal => {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
@@ -429,7 +481,10 @@ btnNewGame.addEventListener('click', () => {
   initGame();
 });
 
-// Avvio
+btnQuickNewGame.addEventListener('click', () => {
+  initGame();
+});
+
 window.addEventListener('load', () => {
   updateStatsUI();
   initGame();

@@ -41,9 +41,14 @@
   <main class="game-container">
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Griglia Tentativi (Dinamica) -->
+    <!-- Griglia Tentativi -->
     <div class="board-wrapper">
       <div id="game-board" class="game-board"></div>
+    </div>
+
+    <!-- Pulsante Nuova Partita in-game per la modalità infinita -->
+    <div id="in-game-action-box" class="in-game-action-box hidden">
+      <button id="btn-quick-new-game" class="primary-btn">Nuova Partita 🔄</button>
     </div>
 
     <!-- Tastiera virtuale -->
@@ -60,30 +65,30 @@
     </div>
   </main>
 
-  <!-- Modal Regole (Si apre ad ogni avvio) -->
+  <!-- Modal Regole -->
   <div id="modal-rules" class="modal open">
     <div class="modal-content">
       <button class="modal-close" id="close-rules">&times;</button>
-      <h2>Come Giocare 🇮🇹</h2>
+      <h2>Come Giocare</h2>
       <p>Indovina la <strong>Provincia Italiana</strong> in 6 tentativi!</p>
       <ul class="rules-list">
         <li>Ogni tentativo deve essere una provincia italiana valida.</li>
         <li>Gli accenti e gli apostrofi vengono rimossi (es. <em>Forlì-Cesena</em> &rarr; <code>FORLI-CESENA</code>, <em>L'Aquila</em> &rarr; <code>LAQUILA</code>).</li>
-        <li><strong>Il trattino (-) è considerato una lettera a tutti gli effetti</strong> ed è presente sulla tastiera.</li>
-        <li>La griglia si adatta in lunghezza alla provincia che digiti!</li>
+        <li><strong>Sia il trattino (-) che lo SPAZIO sono considerati caratteri a tutti gli effetti</strong> e si illuminano con i colori corrispondenti.</li>
+        <li>La griglia si espande in automatico in base alla lunghezza della provincia digitata.</li>
       </ul>
 
       <h3>Legenda Colori:</h3>
       <div class="example-grid">
         <div class="example-tile correct">R</div>
-        <p><strong>Verde:</strong> La lettera è corretta e nella posizione giusta.</p>
+        <p><strong class="text-correct">Verde:</strong> La lettera è corretta e nella posizione giusta.</p>
         <div class="example-tile present">M</div>
-        <p><strong>Giallo:</strong> La lettera è presente nella provincia, ma nella posizione sbagliata.</p>
+        <p><strong class="text-present">Giallo:</strong> La lettera è presente nella provincia, ma nella posizione sbagliata.</p>
         <div class="example-tile absent">A</div>
-        <p><strong>Rosso:</strong> La lettera non appartiene alla provincia da indovinare.</p>
+        <p><strong class="text-absent">Rosso:</strong> La lettera non appartiene alla provincia da indovinare.</p>
       </div>
 
-      <button id="btn-start" class="primary-btn">Inizia a Giocare 🚀</button>
+      <button id="btn-start" class="primary-btn">Inizia a Giocare 🇮🇹</button>
     </div>
   </div>
 
@@ -118,7 +123,6 @@
     </div>
   </div>
 
-  <!-- Caricamento script -->
   <script src="province.js"></script>
   <script src="script.js"></script>
 </body>
